@@ -1,0 +1,23 @@
+"Phrases"
+{
+	"TimeOver"
+	{
+		"en"			"Time limit reached."
+		"pt"			"Tempo limite alcançado."
+	}
+	"RandomTR"
+	{
+		"en"			"Random terrorist chosen."
+		"pt"			"Terrorista escolhido aleatoriamente."
+	}
+	"RandomTR"
+	{
+		"en"			"Random terrorist chosen."
+		"pt"			"Terrorista escolhido aleatoriamente."
+	}
+	"KillPrevent"
+	{
+		"en" 		"Kill command disabled."
+		"pt" 		"Comando kill desativado."
+	}
+}
