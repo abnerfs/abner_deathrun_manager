@@ -14,7 +14,7 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.0"
+#define PLUGIN_VERSION "2.0fix"
 
 bool jaTR[MAXPLAYERS+1] = false;
 Handle roundTime = INVALID_HANDLE;
@@ -24,7 +24,6 @@ Handle g_TrKills;
 Handle g_RandomTR;
 Handle g_killTRFrag;
 Handle g_TimeLimit;
-Handle g_maxTRs;
 
 public Plugin myinfo =
 {
@@ -52,8 +51,6 @@ public void OnPluginStart()
 	AddCommandListener(JoinTeam, "jointeam");
 	AddCommandListener(Suicide, "kill");
 	
-	SetCvar("sv_enablebunnyhopping", "1");
-	SetCvar("sv_airaccelerate", "2000");
 	SetCvar("mp_autoteambalance", "0");
 	SetCvar("mp_limitteams", "0");
 
@@ -320,10 +317,10 @@ public Action JoinTeam(int client, const char[] command, int args)
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
 		
-	if(arg == 1 && GetClientTeam(client) != 2)
-		return Plugin_Continue;
+	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2)
+		return Plugin_Handled;
 		
-	if(GetClientCount() > 1 && GetConVarInt(g_RandomTR) == 1)
+	if(GetConVarInt(g_RandomTR) == 1)
 	{
 		if(GetClientTeam(client) == 0)
 		{
@@ -332,11 +329,12 @@ public Action JoinTeam(int client, const char[] command, int args)
 		return Plugin_Handled;
 	}
 	
-	if(arg == 2 && (GetTeamClientCount(2) < GetConVarInt(g_maxTRs)) )
+	if(arg == 2 && GetTeamClientCount(2) >= 1 )
 	{
-		return Plugin_Continue;
+		return Plugin_Handled;
 	}
-	return Plugin_Handled;
+	
+	return Plugin_Continue;
 }	
 
 public Action Suicide(int client, const char[] command, int args)
