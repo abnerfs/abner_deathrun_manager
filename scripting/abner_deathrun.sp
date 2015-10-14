@@ -14,7 +14,10 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.0fix"
+#define PLUGIN_VERSION "2.1"
+#pragma newdecls required
+
+#define TRCONDITIONS GetTeamClientCount(2) == 0  && (GetTeamClientCount(3) + GetTeamClientCount(2) > 1) && GetConVarInt(g_RandomTR) == 1
 
 bool jaTR[MAXPLAYERS+1] = false;
 Handle roundTime = INVALID_HANDLE;
@@ -36,7 +39,7 @@ public Plugin myinfo =
 
 public void OnPluginStart()
 {  
-	CreateConVar("abner_deathrun_version", PLUGIN_VERSION, "Plugin Version", FCVAR_PLUGIN|FCVAR_NOTIFY|FCVAR_REPLICATED);
+	CreateConVar("abner_deathrun_version", PLUGIN_VERSION, "Plugin Version", FCVAR_NOTIFY|FCVAR_REPLICATED);
 	AutoExecConfig(true, "abner_deathrun");
 	
 	LoadTranslations("common.phrases");
@@ -57,8 +60,9 @@ public void OnPluginStart()
 	HookEvent("round_start", RoundStart);
 	HookEvent("round_end", RoundEnd);
 	HookEvent("player_death", PlayerDeath);
+	HookEvent("player_disconnect", Disconnect, EventHookMode_Post);
 	
-	for (new i = 1; i <= MaxClients; i++)
+	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (!IsClientInGame(i))
 		{
@@ -69,7 +73,21 @@ public void OnPluginStart()
 	}
 }
 
-public PlayerDeath(Handle event,const char[] name,bool dontBroadcast)
+public void Disconnect(Handle event,const char[] name,bool dontBroadcast)
+{
+	if(GetConVarInt(g_Enabled) == 1)
+		CreateTimer(0.5, CheckTR);
+}
+
+public Action CheckTR(Handle time)
+{
+	if(TRCONDITIONS)
+	{
+		NewRandomTR();
+	}
+}
+
+public void PlayerDeath(Handle event,const char[] name,bool dontBroadcast)
 {
 	if(GetConVarInt(g_Enabled) != 1)
 		return;
@@ -105,11 +123,22 @@ public void OnClientPutInServer(int client)
 }
 
 public Action RoundStart(Handle event, const char[] name, bool dontBroadcast) 
-{ 
+{
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
-		
-	for (new i = 1; i <= MaxClients; i++)
+	
+	for(int  i=0;i<GetMaxEntities();++i)
+	{
+		if(!IsValidEdict(i))
+			continue;
+	
+		char strName[64];
+		GetEdictClassname(i, strName, sizeof(strName));
+		if(StrEqual(strName, "weapon_c4"))
+			RemoveEdict(i);
+	}
+	
+	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsValidClient(i) && GetClientTeam(i) > 1 && !IsPlayerAlive(i))
 		{
@@ -117,7 +146,7 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 		}
 	}
 	
-	if((GetTeamClientCount(2) == 0 ||  GetTeamClientCount(2) > 1) && GetTeamClientCount(3) + GetTeamClientCount(2) > 1 && GetConVarInt(g_RandomTR) == 1)
+	if(TRCONDITIONS)
 	{
 		NewRandomTR();
 	}
@@ -132,7 +161,6 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 	Handle timeCvar = FindConVar("mp_roundtime");
 	roundTime = CreateTimer(GetConVarFloat(timeCvar)*60.0, TimeKill);
 	return Plugin_Continue;
-	
 }
 
 public Action TimeKill(Handle timer)
@@ -141,7 +169,7 @@ public Action TimeKill(Handle timer)
 	if(GetConVarInt(g_Enabled) != 1 || GetConVarInt(g_TimeLimit) != 1)
 		return Plugin_Continue;
 		
-	for (new i = 1; i < MaxClients; i++)
+	for (int i = 1; i < MaxClients; i++)
 	{	
 		if(IsValidClient(i) && IsPlayerAlive(i) && GetClientTeam(i) == 3)
 		{
@@ -153,7 +181,7 @@ public Action TimeKill(Handle timer)
 	return Plugin_Continue;
 }
 
-DealDamage(victim,damage,attacker=0,dmg_type, char[] weapon="")
+void DealDamage(int victim,int damage,int attacker=0,int dmg_type, char[] weapon="")
 {
 	if(victim>0 && IsValidEdict(victim) && IsClientInGame(victim) && IsPlayerAlive(victim) && damage>0)
 	{
@@ -183,7 +211,7 @@ DealDamage(victim,damage,attacker=0,dmg_type, char[] weapon="")
 
 int FoundTR()
 {
-	for (new i = 1; i < MaxClients; i++)
+	for (int  i = 1; i < MaxClients; i++)
 	{	
 		if(IsValidClient(i) && GetClientTeam(i) == 2)
 		{
@@ -240,7 +268,7 @@ public void ChangeTeam(int client, int index)
 {
 	if(GetClientTeam(client) == 3 && IsPlayerAlive(client))
 	{
-		ForcePlayerSuicide(client);
+		ChangeClientTeam(client, index);
 		int frags = GetClientFrags(client) +1;
 		int deaths = GetClientDeaths(client) -1;
 		SetEntProp(client, Prop_Data, "m_iFrags", frags);
@@ -301,7 +329,7 @@ int randomTR()
 	return 0;	
 } 
 
-stock SetCvar(char[] scvar, char[] svalue)
+stock void SetCvar(char[] scvar, char[] svalue)
 {
 	Handle cvar = FindConVar(scvar);
 	if(cvar != INVALID_HANDLE)
@@ -317,23 +345,17 @@ public Action JoinTeam(int client, const char[] command, int args)
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
 		
-	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2)
-		return Plugin_Handled;
-		
-	if(GetConVarInt(g_RandomTR) == 1)
-	{
-		if(GetClientTeam(client) == 0)
-		{
-			ChangeTeam(client, 3);
-		}
+	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2)//TR can't change team
+	{		
+		PrintCenterText(client, "%t", "Cant Change");
 		return Plugin_Handled;
 	}
 	
-	if(arg == 2 && GetTeamClientCount(2) >= 1 )
+	if(arg == 2 && GetTeamClientCount(2) >= 1 ) //TR team limit to 1
 	{
+		PrintCenterText(client, "%t", "Team Limit");
 		return Plugin_Handled;
 	}
-	
 	return Plugin_Continue;
 }	
 
