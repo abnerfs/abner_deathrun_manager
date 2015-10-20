@@ -22,7 +22,7 @@
 	}
 	"Cant Change"
 	{
-		"en" 		"***Terrorists Can't Change Team***""
+		"en" 		"***Terrorists Can't Change Team***"
 		"pt" 		"***Terroristas não podem trocar de time***"
 	}
 	"Team Limit"
