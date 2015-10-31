@@ -11,6 +11,7 @@
 	-No Spec chosen (X) Need test
 	-TR Change team to spec then get kills. (X) Need test
 	-No CT num limit(x) Need Test;
+	-Everyone in CT side is dead and round don´t start. (Line 371)
 	
 	1. Make the respawn of people in the early rounds the first 10-15 seconds. ( )
 	2. If more than 15 players must be more terrorists. ( )
@@ -364,9 +365,9 @@ public Action JoinTeam(int client, const char[] command, int args)
 		return Plugin_Handled;
 	}
 	
-	if(arg == 3 && GetClientTeam(client)  < 2) //No CT Number limit
+	if(arg == 3 && GetClientTeam(client)  < 2 && GetTeamClientCount(3) > 0) //No CT Number limit
 	{
-		CS_SwitchTeam(client, 3);
+		ChangeClientTeam(client, 3);
 		return Plugin_Handled;
 	}
 	
