@@ -5,6 +5,19 @@
 	-Limit number of terrorists.
 	-Extra frag by kill terrorists.
 	-Kill alive cts if round time ends.
+	
+	2.2 foreseen
+	-Lock tr team (X) OK
+	-No Spec chosen (X) Need test
+	-TR Change team to spec then get kills. (X) Need test
+	-No CT num limit(x) Need Test;
+	
+	1. Make the respawn of people in the early rounds the first 10-15 seconds. ( )
+	2. If more than 15 players must be more terrorists. ( )
+	3. ban if a terrorist disconnected from the server for an hour. ( )
+	4. Giving bonuses for many frags (gravity, speed) ( )
+	5. At the roundstart there is a message who is the next Terrorist. ( )
+	6. Maybe if its possible: No doublepushes. ( )
 */
 
 #include <sourcemod>
@@ -14,7 +27,7 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.1"
+#define PLUGIN_VERSION "2.2"
 #pragma newdecls required
 
 #define TRCONDITIONS GetTeamClientCount(2) == 0  && (GetTeamClientCount(3) + GetTeamClientCount(2) > 1) && GetConVarInt(g_RandomTR) == 1
@@ -107,8 +120,8 @@ public Action OnTakeDamage(int client, int &attacker, int &inflictor, float &dam
 	if(GetConVarInt(g_Enabled) != 1 || GetConVarInt(g_TrKills) != 1)
 		return Plugin_Continue;
 		
-	int tr = FoundTR();
-	if(GetClientTeam(client) == 3 && IsValidClient(tr))
+	int tr = getCurrentTR();
+	if(GetClientTeam(client) == 3 && tr != -1)
 	{
 		attacker = tr;
 	}
@@ -209,16 +222,16 @@ void DealDamage(int victim,int damage,int attacker=0,int dmg_type, char[] weapon
 	}
 }
 
-int FoundTR()
+int getCurrentTR()
 {
 	for (int  i = 1; i < MaxClients; i++)
 	{	
-		if(IsValidClient(i) && GetClientTeam(i) == 2)
+		if(IsValidClient(i) && GetClientTeam(i) == 2 && IsPlayerAlive(i))
 		{
 			return i;
 		}
 	}
-	return 0;
+	return -1;
 }
 
 public Action RoundEnd(Handle event, const char[] name, bool dontBroadcast) 
@@ -312,7 +325,7 @@ int randomTR()
 	count = 0;
 	for(int i = 1;i <= MaxClients; i++)
 	{
-		if(IsValidClient(i))
+		if(IsValidClient(i) &&  GetClientTeam(i) == 3)
 		{
 			jaTR[i] = false;
 			clients[count++] = i;
@@ -351,7 +364,13 @@ public Action JoinTeam(int client, const char[] command, int args)
 		return Plugin_Handled;
 	}
 	
-	if(arg == 2 && GetTeamClientCount(2) >= 1 ) //TR team limit to 1
+	if(arg == 3 && GetClientTeam(client)  < 2) //No CT Number limit
+	{
+		CS_SwitchTeam(client, 3);
+		return Plugin_Handled;
+	}
+	
+	if(arg == 2) //Lock TR team
 	{
 		PrintCenterText(client, "%t", "Team Limit");
 		return Plugin_Handled;
