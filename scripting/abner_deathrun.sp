@@ -11,7 +11,8 @@
 	-No Spec chosen (X) Need test
 	-TR Change team to spec then get kills. (X) Need test
 	-No CT num limit(x) Need Test;
-	-Everyone in CT side is dead and round don´t start. (Line 371)
+	-Everyone in CT side is dead and round don´t start. (x)
+	-First round free round? ( )
 	
 	1. Make the respawn of people in the early rounds the first 10-15 seconds. ( )
 	2. If more than 15 players must be more terrorists. ( )
@@ -35,6 +36,7 @@
 
 bool jaTR[MAXPLAYERS+1] = false;
 Handle roundTime = INVALID_HANDLE;
+bool roundEnd = false;
 
 Handle g_Enabled;
 Handle g_TrKills;
@@ -138,6 +140,7 @@ public void OnClientPutInServer(int client)
 
 public Action RoundStart(Handle event, const char[] name, bool dontBroadcast) 
 {
+	roundEnd = false;
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
 	
@@ -160,10 +163,7 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 		}
 	}
 	
-	if(TRCONDITIONS)
-	{
-		NewRandomTR();
-	}
+	CreateTimer(0.5, CheckTR);
 	
 	if(GetConVarInt(g_TimeLimit) != 1)
 		return Plugin_Continue;
@@ -237,6 +237,7 @@ int getCurrentTR()
 
 public Action RoundEnd(Handle event, const char[] name, bool dontBroadcast) 
 { 
+	roundEnd = true;
 	if(GetConVarInt(g_Enabled) != 1 || GetConVarInt(g_RandomTR) != 1)
 		return;
 		
@@ -355,6 +356,11 @@ public Action JoinTeam(int client, const char[] command, int args)
 	char argz[32];  
 	GetCmdArg(1, argz, sizeof(argz));
 	int arg = StringToInt(argz);
+	
+	if(arg > 1 && !roundEnd)
+	{
+		CreateTimer(0.0, CheckTR);
+	}
 	
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
