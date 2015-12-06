@@ -1,27 +1,3 @@
-/*Functions:
-	-Prevent "kill" command.
-	-Choose a random Terrorist every round.
-	-Give kills to terrorists.
-	-Limit number of terrorists.
-	-Extra frag by kill terrorists.
-	-Kill alive cts if round time ends.
-	
-	2.2 foreseen
-	-Lock tr team (X) OK
-	-No Spec chosen (X) Need test
-	-TR Change team to spec then get kills. (X) Need test
-	-No CT num limit(x) Need Test;
-	-Everyone in CT side is dead and round don´t start. (x)
-	-First round free round? ( )
-	
-	1. Make the respawn of people in the early rounds the first 10-15 seconds. ( )
-	2. If more than 15 players must be more terrorists. ( )
-	3. ban if a terrorist disconnected from the server for an hour. ( )
-	4. Giving bonuses for many frags (gravity, speed) ( )
-	5. At the roundstart there is a message who is the next Terrorist. ( )
-	6. Maybe if its possible: No doublepushes. ( )
-*/
-
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
@@ -29,20 +5,22 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.2"
+#define PLUGIN_VERSION "2.3"
 #pragma newdecls required
 
 #define TRCONDITIONS GetTeamClientCount(2) == 0  && (GetTeamClientCount(3) + GetTeamClientCount(2) > 1) && GetConVarInt(g_RandomTR) == 1
 
 bool jaTR[MAXPLAYERS+1] = false;
 Handle roundTime = INVALID_HANDLE;
-bool roundEnd = false;
+bool roundEnd = false; 
 
 Handle g_Enabled;
 Handle g_TrKills;
 Handle g_RandomTR;
 Handle g_killTRFrag;
 Handle g_TimeLimit;
+Handle g_TRSpeed;
+
 
 public Plugin myinfo =
 {
@@ -53,6 +31,7 @@ public Plugin myinfo =
 	url = "www.tecnohardclan.com"
 }
 
+
 public void OnPluginStart()
 {  
 	CreateConVar("abner_deathrun_version", PLUGIN_VERSION, "Plugin Version", FCVAR_NOTIFY|FCVAR_REPLICATED);
@@ -61,18 +40,17 @@ public void OnPluginStart()
 	LoadTranslations("common.phrases");
 	LoadTranslations("abner_deathrun.phrases");
 	
-	g_Enabled = CreateConVar("dr_enabled", "1", "Enable or Disable the Plugin.");
-	g_TrKills = CreateConVar("dr_tr_kills", "1", "Give kills to terrorists.");
-	g_RandomTR = CreateConVar("dr_random_tr", "1", "Choose a random terrorist every round.");
-	g_killTRFrag = CreateConVar("dr_kill_tr_frag", "10", "Frags gives to cts who kills terrorists");
-	g_TimeLimit = CreateConVar("dr_time_limit", "1", "Kill alive cts if round time ends.");
+	g_Enabled 				= CreateConVar("dr_enabled", "1", "Enable or Disable the Plugin.");
+	g_TrKills 			    = CreateConVar("dr_tr_kills", "1", "Give kills to terrorists.");
+	g_RandomTR 			    = CreateConVar("dr_random_tr", "1", "Choose a random terrorist every round.");
+	g_killTRFrag 			= CreateConVar("dr_kill_tr_frag", "10", "Frags gives to cts who kills terrorists");
+	g_TimeLimit			    = CreateConVar("dr_time_limit", "1", "Kill alive cts if round time ends.");
+	g_TRSpeed 				= CreateConVar("dr_tr_speed", "1.0", "Terrorist speed, 1.0 to default speed.");
 	
 	AddCommandListener(JoinTeam, "jointeam");
 	AddCommandListener(Suicide, "kill");
 	
-	SetCvar("mp_autoteambalance", "0");
-	SetCvar("mp_limitteams", "0");
-
+	HookEvent("player_spawn", PlayerSpawn); //TR Speed hook.
 	HookEvent("round_start", RoundStart);
 	HookEvent("round_end", RoundEnd);
 	HookEvent("player_death", PlayerDeath);
@@ -89,6 +67,27 @@ public void OnPluginStart()
 	}
 }
 
+public void OnConfigsExecuted()
+{
+	SetCvar("mp_autoteambalance", "0");
+	SetCvar("mp_limitteams", "0");
+}
+
+public Action PlayerSpawn(Handle event, char[] name, bool dontBroadcast) 
+{ 
+	//Terrorist Speed
+	int client		 = GetClientOfUserId(GetEventInt(event, "userid"));
+	float trspeed 	 = GetConVarFloat(g_TRSpeed);
+	
+	if(GetClientTeam(client) == 2)
+	{
+		if(trspeed != 1.0) //Definir como 1.0 pode alterar a velocidade padrão do mapa.
+		{
+			SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", trspeed);
+		}
+	}
+}
+
 public void Disconnect(Handle event,const char[] name,bool dontBroadcast)
 {
 	if(GetConVarInt(g_Enabled) == 1)
@@ -97,7 +96,7 @@ public void Disconnect(Handle event,const char[] name,bool dontBroadcast)
 
 public Action CheckTR(Handle time)
 {
-	if(TRCONDITIONS)
+	if(TRCONDITIONS && !roundEnd) //Adicionado para impedir que sejam selecionados 2 terroristas de uma vez (um por disconectar e outro pelo fim do round)
 	{
 		NewRandomTR();
 	}
@@ -353,31 +352,32 @@ stock void SetCvar(char[] scvar, char[] svalue)
 
 public Action JoinTeam(int client, const char[] command, int args)
 {
+	if(GetConVarInt(g_Enabled) != 1)
+		return Plugin_Continue;
+		
 	char argz[32];  
 	GetCmdArg(1, argz, sizeof(argz));
 	int arg = StringToInt(argz);
 	
+	/* Não lembro porque coloquei isso :X
 	if(arg > 1 && !roundEnd)
 	{
 		CreateTimer(0.0, CheckTR);
-	}
-	
-	if(GetConVarInt(g_Enabled) != 1)
-		return Plugin_Continue;
-		
-	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2)//TR can't change team
+	}*/
+			
+	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2) // Terroristas não podem mudar de time se houverem cts.
 	{		
 		PrintCenterText(client, "%t", "Cant Change");
 		return Plugin_Handled;
 	}
 	
-	if(arg == 3 && GetClientTeam(client)  < 2 && GetTeamClientCount(3) > 0) //No CT Number limit
+	if(GetClientTeam(client) == 1) // Remove o limit de CTs, passando espectadores que tentarem trocar de time automaticamente para CT.
 	{
 		ChangeClientTeam(client, 3);
 		return Plugin_Handled;
 	}
 	
-	if(arg == 2) //Lock TR team
+	if(arg == 2) // Bloqueia o time terrorista
 	{
 		PrintCenterText(client, "%t", "Team Limit");
 		return Plugin_Handled;
@@ -401,24 +401,5 @@ stock bool IsValidClient(int client)
 	if(!IsClientConnected(client)) return false;
 	return IsClientInGame(client);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
