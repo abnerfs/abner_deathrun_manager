@@ -1,3 +1,27 @@
+/*Functions:
+	-Prevent "kill" command.
+	-Choose a random Terrorist every round.
+	-Give kills to terrorists.
+	-Limit number of terrorists.
+	-Extra frag by kill terrorists.
+	-Kill alive cts if round time ends.
+	
+	2.2 foreseen
+	-Lock tr team (X) OK
+	-No Spec chosen (X) Need test
+	-TR Change team to spec then get kills. (X) Need test
+	-No CT num limit(x) Need Test;
+	-Everyone in CT side is dead and round don´t start. (x)
+	-First round free round? ( )
+	
+	1. Make the respawn of people in the early rounds the first 10-15 seconds. ( )
+	2. If more than 15 players must be more terrorists. ( )
+	3. ban if a terrorist disconnected from the server for an hour. ( )
+	4. Giving bonuses for many frags (gravity, speed) ( )
+	5. At the roundstart there is a message who is the next Terrorist. ( )
+	6. Maybe if its possible: No doublepushes. ( )
+*/
+
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
@@ -5,14 +29,14 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.3"
+#define PLUGIN_VERSION "2.3fix"
 #pragma newdecls required
 
-#define TRCONDITIONS GetTeamClientCount(2) == 0  && (GetTeamClientCount(3) + GetTeamClientCount(2) > 1) && GetConVarInt(g_RandomTR) == 1
+#define TRCONDITIONS GetTeamClientCount(2) == 0  && GetTeamClientCount(3) > 1 && GetConVarInt(g_RandomTR) == 1
 
 bool jaTR[MAXPLAYERS+1] = false;
 Handle roundTime = INVALID_HANDLE;
-bool roundEnd = false; 
+bool TRJaEscolhido = false; 
 
 Handle g_Enabled;
 Handle g_TrKills;
@@ -96,7 +120,7 @@ public void Disconnect(Handle event,const char[] name,bool dontBroadcast)
 
 public Action CheckTR(Handle time)
 {
-	if(TRCONDITIONS && !roundEnd) //Adicionado para impedir que sejam selecionados 2 terroristas de uma vez (um por disconectar e outro pelo fim do round)
+	if(TRCONDITIONS && !TRJaEscolhido) //Adicionado para impedir que sejam selecionados 2 terroristas de uma vez (um por disconectar e outro pelo fim do round)
 	{
 		NewRandomTR();
 	}
@@ -123,7 +147,7 @@ public Action OnTakeDamage(int client, int &attacker, int &inflictor, float &dam
 		return Plugin_Continue;
 		
 	int tr = getCurrentTR();
-	if(GetClientTeam(client) == 3 && tr != -1)
+	if(GetClientTeam(client) == 3 && IsValidClient(tr))
 	{
 		attacker = tr;
 	}
@@ -139,10 +163,11 @@ public void OnClientPutInServer(int client)
 
 public Action RoundStart(Handle event, const char[] name, bool dontBroadcast) 
 {
-	roundEnd = false;
+	TRJaEscolhido = false;
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
 	
+	//Remove c4 do mapa (Não sei o porque mas pediram isso :X)
 	for(int  i=0;i<GetMaxEntities();++i)
 	{
 		if(!IsValidEdict(i))
@@ -154,6 +179,7 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 			RemoveEdict(i);
 	}
 	
+	//Renasce todos os jogadores (para o caso de alguém estiver bugado e não conseguir nascer)
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsValidClient(i) && GetClientTeam(i) > 1 && !IsPlayerAlive(i))
@@ -163,14 +189,13 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 	}
 	
 	CreateTimer(0.5, CheckTR);
-	
 	if(GetConVarInt(g_TimeLimit) != 1)
 		return Plugin_Continue;
 		
-	if(roundTime != INVALID_HANDLE)
-	{
+	if(roundTime != INVALID_HANDLE){
 		KillTimer(roundTime);
 	}
+	
 	Handle timeCvar = FindConVar("mp_roundtime");
 	roundTime = CreateTimer(GetConVarFloat(timeCvar)*60.0, TimeKill);
 	return Plugin_Continue;
@@ -236,22 +261,16 @@ int getCurrentTR()
 
 public Action RoundEnd(Handle event, const char[] name, bool dontBroadcast) 
 { 
-	roundEnd = true;
 	if(GetConVarInt(g_Enabled) != 1 || GetConVarInt(g_RandomTR) != 1)
 		return;
-		
+	
 	allGod();
+	
+	//Se o round acabar e não for rounddraw, ou se for rounddraw e não houverem terroristas um novo terrosita é escolhido.
 	int winner = GetEventInt(event, "winner");
 	if (winner > 1 || GetTeamClientCount(2) == 0)
 	{
-		for(int i = 0;i < MaxClients; i++)
-		{
-			if(IsValidClient(i) && GetClientTeam(i) == 2)
-			{
-				CreateTimer(1.0, ChangeTeamTime, i);
-			}
-		}
-		CreateTimer(0.1, NewTR);
+		NewRandomTR();
 	}
 }
 
@@ -264,12 +283,6 @@ public void allGod()
 			SetEntProp(i, Prop_Data, "m_takedamage", 0, 1);
 		}
 	}
-	
-}
-
-public Action NewTR(Handle timer)
-{
-	NewRandomTR();
 }
 
 public Action ChangeTeamTime(Handle timer, any client)
@@ -293,6 +306,20 @@ public void ChangeTeam(int client, int index)
 
 public void NewRandomTR()
 {
+	if(TRJaEscolhido) //Só pode escolher um novo TR uma vez por Round.
+		return;
+		
+	TRJaEscolhido = true;
+	//Se houver algum terrorista passa ele para TR antes de escolher um novo.
+	for(int i = 1;i <= MaxClients; i++)
+	{
+		if(IsValidClient(i) && GetClientTeam(i) == 2)
+		{
+			CreateTimer(1.0, ChangeTeamTime, i);
+		}
+	}
+	
+	//Escolhe o novo terrorista
 	int client = randomTR();
 	if(IsValidClient(client))
 	{
@@ -401,5 +428,4 @@ stock bool IsValidClient(int client)
 	if(!IsClientConnected(client)) return false;
 	return IsClientInGame(client);
 }
-
 
