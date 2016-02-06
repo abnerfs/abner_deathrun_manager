@@ -1,27 +1,3 @@
-/*Functions:
-	-Prevent "kill" command.
-	-Choose a random Terrorist every round.
-	-Give kills to terrorists.
-	-Limit number of terrorists.
-	-Extra frag by kill terrorists.
-	-Kill alive cts if round time ends.
-	
-	2.2 foreseen
-	-Lock tr team (X) OK
-	-No Spec chosen (X) Need test
-	-TR Change team to spec then get kills. (X) Need test
-	-No CT num limit(x) Need Test;
-	-Everyone in CT side is dead and round don´t start. (x)
-	-First round free round? ( )
-	
-	1. Make the respawn of people in the early rounds the first 10-15 seconds. ( )
-	2. If more than 15 players must be more terrorists. ( )
-	3. ban if a terrorist disconnected from the server for an hour. ( )
-	4. Giving bonuses for many frags (gravity, speed) ( )
-	5. At the roundstart there is a message who is the next Terrorist. ( )
-	6. Maybe if its possible: No doublepushes. ( )
-*/
-
 #include <sourcemod>
 #include <sdktools>
 #include <sdkhooks>
@@ -29,18 +5,16 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.3fix"
+#define PLUGIN_VERSION "2.4"
 #pragma newdecls required
 
-#define TRCONDITIONS GetTeamClientCount(2) == 0  && GetTeamClientCount(3) > 1 && GetConVarInt(g_RandomTR) == 1
+#define TRCONDITIONS GetTeamClientCount(2) == 0  && GetTeamClientCount(3) > 1
 
 bool jaTR[MAXPLAYERS+1] = false;
 Handle roundTime = INVALID_HANDLE;
-bool TRJaEscolhido = false; 
 
 Handle g_Enabled;
 Handle g_TrKills;
-Handle g_RandomTR;
 Handle g_killTRFrag;
 Handle g_TimeLimit;
 Handle g_TRSpeed;
@@ -66,7 +40,6 @@ public void OnPluginStart()
 	
 	g_Enabled 				= CreateConVar("dr_enabled", "1", "Enable or Disable the Plugin.");
 	g_TrKills 			    = CreateConVar("dr_tr_kills", "1", "Give kills to terrorists.");
-	g_RandomTR 			    = CreateConVar("dr_random_tr", "1", "Choose a random terrorist every round.");
 	g_killTRFrag 			= CreateConVar("dr_kill_tr_frag", "10", "Frags gives to cts who kills terrorists");
 	g_TimeLimit			    = CreateConVar("dr_time_limit", "1", "Kill alive cts if round time ends.");
 	g_TRSpeed 				= CreateConVar("dr_tr_speed", "1.0", "Terrorist speed, 1.0 to default speed.");
@@ -99,6 +72,9 @@ public void OnConfigsExecuted()
 
 public Action PlayerSpawn(Handle event, char[] name, bool dontBroadcast) 
 { 
+	if(GetConVarInt(g_Enabled)!= 1)
+		return Plugin_Handled;
+
 	//Terrorist Speed
 	int client		 = GetClientOfUserId(GetEventInt(event, "userid"));
 	float trspeed 	 = GetConVarFloat(g_TRSpeed);
@@ -110,6 +86,9 @@ public Action PlayerSpawn(Handle event, char[] name, bool dontBroadcast)
 			SetEntPropFloat(client, Prop_Data, "m_flLaggedMovementValue", trspeed);
 		}
 	}
+	
+	CreateTimer(2.0, CheckTR);
+	return Plugin_Handled;
 }
 
 public void Disconnect(Handle event,const char[] name,bool dontBroadcast)
@@ -120,7 +99,7 @@ public void Disconnect(Handle event,const char[] name,bool dontBroadcast)
 
 public Action CheckTR(Handle time)
 {
-	if(TRCONDITIONS && !TRJaEscolhido) //Adicionado para impedir que sejam selecionados 2 terroristas de uma vez (um por disconectar e outro pelo fim do round)
+	if(TRCONDITIONS)
 	{
 		NewRandomTR();
 	}
@@ -163,7 +142,6 @@ public void OnClientPutInServer(int client)
 
 public Action RoundStart(Handle event, const char[] name, bool dontBroadcast) 
 {
-	TRJaEscolhido = false;
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
 	
@@ -188,7 +166,6 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 		}
 	}
 	
-	CreateTimer(0.5, CheckTR);
 	if(GetConVarInt(g_TimeLimit) != 1)
 		return Plugin_Continue;
 		
@@ -261,7 +238,7 @@ int getCurrentTR()
 
 public Action RoundEnd(Handle event, const char[] name, bool dontBroadcast) 
 { 
-	if(GetConVarInt(g_Enabled) != 1 || GetConVarInt(g_RandomTR) != 1)
+	if(GetConVarInt(g_Enabled) != 1)
 		return;
 	
 	allGod();
@@ -306,10 +283,6 @@ public void ChangeTeam(int client, int index)
 
 public void NewRandomTR()
 {
-	if(TRJaEscolhido) //Só pode escolher um novo TR uma vez por Round.
-		return;
-		
-	TRJaEscolhido = true;
 	//Se houver algum terrorista passa ele para TR antes de escolher um novo.
 	for(int i = 1;i <= MaxClients; i++)
 	{
@@ -428,4 +401,3 @@ stock bool IsValidClient(int client)
 	if(!IsClientConnected(client)) return false;
 	return IsClientInGame(client);
 }
-
