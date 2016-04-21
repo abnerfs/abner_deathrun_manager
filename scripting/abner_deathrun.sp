@@ -5,7 +5,7 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.4"
+#define PLUGIN_VERSION "2.5"
 #pragma newdecls required
 
 #define TRCONDITIONS GetTeamClientCount(2) == 0  && GetTeamClientCount(3) > 1
@@ -243,12 +243,18 @@ public Action RoundEnd(Handle event, const char[] name, bool dontBroadcast)
 	
 	allGod();
 	
-	//Se o round acabar e não for rounddraw, ou se for rounddraw e não houverem terroristas um novo terrosita é escolhido.
+	
+	//Se o round acabar e não for rounddraw, ou se for rounddraw e não houverem terroristas um novo terrorista é escolhido.
 	int winner = GetEventInt(event, "winner");
 	if (winner > 1 || GetTeamClientCount(2) == 0)
 	{
-		NewRandomTR();
+		CreateTimer(1.0, TimeEnd);
 	}
+}
+
+public Action TimeEnd(Handle time)
+{
+	NewRandomTR();
 }
 
 public void allGod()
@@ -358,13 +364,8 @@ public Action JoinTeam(int client, const char[] command, int args)
 	char argz[32];  
 	GetCmdArg(1, argz, sizeof(argz));
 	int arg = StringToInt(argz);
-	
-	/* Não lembro porque coloquei isso :X
-	if(arg > 1 && !roundEnd)
-	{
-		CreateTimer(0.0, CheckTR);
-	}*/
-			
+	PrintToChatAll("%N: %d", client, arg);
+
 	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2) // Terroristas não podem mudar de time se houverem cts.
 	{		
 		PrintCenterText(client, "%t", "Cant Change");
@@ -377,7 +378,7 @@ public Action JoinTeam(int client, const char[] command, int args)
 		return Plugin_Handled;
 	}
 	
-	if(arg == 2) // Bloqueia o time terrorista
+	if(arg == 2 || arg == 0) // Bloqueia o time terrorista
 	{
 		PrintCenterText(client, "%t", "Team Limit");
 		return Plugin_Handled;
@@ -401,3 +402,24 @@ stock bool IsValidClient(int client)
 	if(!IsClientConnected(client)) return false;
 	return IsClientInGame(client);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
