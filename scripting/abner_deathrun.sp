@@ -364,7 +364,6 @@ public Action JoinTeam(int client, const char[] command, int args)
 	char argz[32];  
 	GetCmdArg(1, argz, sizeof(argz));
 	int arg = StringToInt(argz);
-	PrintToChatAll("%N: %d", client, arg);
 
 	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2) // Terroristas não podem mudar de time se houverem cts.
 	{		
