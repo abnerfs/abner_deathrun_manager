@@ -54,6 +54,8 @@ public void OnPluginStart()
 	HookEvent("player_death", PlayerDeath);
 	HookEvent("player_disconnect", Disconnect, EventHookMode_Post);
 	
+	RegConsoleCmd("goct", GoCT);
+	
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (!IsClientInGame(i))
@@ -63,6 +65,11 @@ public void OnPluginStart()
 		jaTR[i] = false;
 		SDKHook(i, SDKHook_OnTakeDamageAlive, OnTakeDamage);
 	}
+}
+
+public Action GoCT(int client, int args){
+	if(GetClientTeam(client) == 1)
+		ChangeClientTeam(client, 3);
 }
 
 public void OnConfigsExecuted()
@@ -77,6 +84,7 @@ public Action PlayerJoinTeam(Handle ev, char[] name, bool dbroad){
 	if(GetEventInt(ev, "team") == 2 && GetTeamClientCount(2)+1 > 1)
 	{
 		CreateTimer(0.1, ChangeTeamTime, client);
+		PrintCenterText(client, "%t", "Team Limit");
 	}
 }
 
