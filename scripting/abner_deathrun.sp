@@ -5,7 +5,7 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.5"
+#define PLUGIN_VERSION "2.6"
 #pragma newdecls required
 
 #define TRCONDITIONS GetTeamClientCount(2) == 0  && GetTeamClientCount(3) > 1
@@ -48,6 +48,7 @@ public void OnPluginStart()
 	AddCommandListener(Suicide, "kill");
 	
 	HookEvent("player_spawn", PlayerSpawn); //TR Speed hook.
+	HookEvent("player_team", PlayerJoinTeam); //TR Speed hook.
 	HookEvent("round_start", RoundStart);
 	HookEvent("round_end", RoundEnd);
 	HookEvent("player_death", PlayerDeath);
@@ -70,6 +71,15 @@ public void OnConfigsExecuted()
 	SetCvar("mp_limitteams", "0");
 }
 
+public Action PlayerJoinTeam(Handle ev, char[] name, bool dbroad){
+	int client = GetClientOfUserId(GetEventInt(ev, "userid"));
+	//Prevent more than 1 terrorist
+	if(GetEventInt(ev, "team") == 2 && GetTeamClientCount(2)+1 > 1)
+	{
+		CreateTimer(0.1, ChangeTeamTime, client);
+	}
+}
+
 public Action PlayerSpawn(Handle event, char[] name, bool dontBroadcast) 
 { 
 	if(GetConVarInt(g_Enabled)!= 1)
@@ -87,7 +97,7 @@ public Action PlayerSpawn(Handle event, char[] name, bool dontBroadcast)
 		}
 	}
 	
-	CreateTimer(2.0, CheckTR);
+	
 	return Plugin_Handled;
 }
 
@@ -144,6 +154,8 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 {
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
+		
+	CreateTimer(2.0, CheckTR);
 	
 	//Remove c4 do mapa (Não sei o porque mas pediram isso :X)
 	for(int  i=0;i<GetMaxEntities();++i)
@@ -276,15 +288,14 @@ public Action ChangeTeamTime(Handle timer, any client)
 
 public void ChangeTeam(int client, int index)
 {
-	if(GetClientTeam(client) == 3 && IsPlayerAlive(client))
+	if(IsPlayerAlive(client) && GetClientTeam(client) != index)
 	{
-		ChangeClientTeam(client, index);
 		int frags = GetClientFrags(client) +1;
 		int deaths = GetClientDeaths(client) -1;
 		SetEntProp(client, Prop_Data, "m_iFrags", frags);
 		SetEntProp(client, Prop_Data, "m_iDeaths", deaths);
 	}
-	CS_SwitchTeam(client, index);
+	ChangeClientTeam(client, index);
 }
 
 public void NewRandomTR()
@@ -294,7 +305,7 @@ public void NewRandomTR()
 	{
 		if(IsValidClient(i) && GetClientTeam(i) == 2)
 		{
-			CreateTimer(1.0, ChangeTeamTime, i);
+			ChangeTeam(i, 3);
 		}
 	}
 	
@@ -364,19 +375,19 @@ public Action JoinTeam(int client, const char[] command, int args)
 	char argz[32];  
 	GetCmdArg(1, argz, sizeof(argz));
 	int arg = StringToInt(argz);
-
-	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2) // Terroristas não podem mudar de time se houverem cts.
-	{		
-		PrintCenterText(client, "%t", "Cant Change");
-		return Plugin_Handled;
-	}
 	
 	if(GetClientTeam(client) == 1) // Remove o limit de CTs, passando espectadores que tentarem trocar de time automaticamente para CT.
 	{
 		ChangeClientTeam(client, 3);
 		return Plugin_Handled;
 	}
-	
+
+	if(GetTeamClientCount(3) > 0 &&  GetClientTeam(client) == 2) // Terroristas não podem mudar de time se houverem cts.
+	{		
+		PrintCenterText(client, "%t", "Cant Change");
+		return Plugin_Handled;
+	}
+		
 	if(arg == 2 || arg == 0) // Bloqueia o time terrorista
 	{
 		PrintCenterText(client, "%t", "Team Limit");
