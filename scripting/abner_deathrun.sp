@@ -5,7 +5,7 @@
 #include <colors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.6"
+#define PLUGIN_VERSION "2.6fix"
 #pragma newdecls required
 
 #define TRCONDITIONS GetTeamClientCount(2) == 0  && GetTeamClientCount(3) > 1
