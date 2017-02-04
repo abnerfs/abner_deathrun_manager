@@ -177,14 +177,7 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 			RemoveEdict(i);
 	}
 	
-	//Renasce todos os jogadores (para o caso de alguém estiver bugado e não conseguir nascer)
-	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (IsValidClient(i) && GetClientTeam(i) > 1 && !IsPlayerAlive(i))
-		{
-			CS_RespawnPlayer(i);
-		}
-	}
+	CreateTimer(1.0, RespawnPlayers);
 	
 	if(GetConVarInt(g_TimeLimit) != 1)
 		return Plugin_Continue;
@@ -196,6 +189,18 @@ public Action RoundStart(Handle event, const char[] name, bool dontBroadcast)
 	Handle timeCvar = FindConVar("mp_roundtime");
 	roundTime = CreateTimer(GetConVarFloat(timeCvar)*60.0, TimeKill);
 	return Plugin_Continue;
+}
+
+
+public Action RespawnPlayers(Handle time)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsValidClient(i) && GetClientTeam(i) > 1 && !IsPlayerAlive(i))
+		{
+			CS_RespawnPlayer(i);
+		}
+	}
 }
 
 public Action TimeKill(Handle timer)
