@@ -78,7 +78,6 @@ public void OnMapStart()
 	ServerCommand("mp_backup_round_file_last \"\"");
 	ServerCommand("mp_backup_round_file_pattern \"\"");
 	ServerCommand("mp_backup_round_auto 0");
-	ServerCommand("sm_rr");
 }
 
 public Action GoCT(int client, int args){
