@@ -57,11 +57,7 @@ public void OnPluginStart()
 	
 	RegConsoleCmd("goct", GoCT);
 	
-	ServerCommand("mp_backup_round_file \"\"");
-	ServerCommand("mp_backup_round_file_last \"\"");
-	ServerCommand("mp_backup_round_file_pattern \"\"");
-	ServerCommand("mp_backup_round_auto 0");
-	
+
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (!IsClientInGame(i))
