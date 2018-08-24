@@ -2,10 +2,10 @@
 #include <sdktools>
 #include <sdkhooks>
 #include <cstrike>
-#include <colors>
+#include <multicolors>
 
 #pragma semicolon 1
-#define PLUGIN_VERSION "2.6fix"
+#define PLUGIN_VERSION "2.7"
 #pragma newdecls required
 
 #define TRCONDITIONS GetTeamClientCount(2) == 0  && GetTeamClientCount(3) > 1
@@ -22,7 +22,7 @@ Handle g_TRSpeed;
 
 public Plugin myinfo =
 {
-	name = "[CSS/CS:GO] AbNeR DeathRun Manager",
+	name = "[CSS/CS:GO] DeathRun Manager",
 	author = "AbNeR_CSS",
 	description = "Deathrun manager",
 	version = PLUGIN_VERSION,
@@ -78,6 +78,7 @@ public void OnMapStart()
 	ServerCommand("mp_backup_round_file_last \"\"");
 	ServerCommand("mp_backup_round_file_pattern \"\"");
 	ServerCommand("mp_backup_round_auto 0");
+	ServerCommand("sm_rr");
 }
 
 public Action GoCT(int client, int args){
@@ -89,6 +90,7 @@ public void OnConfigsExecuted()
 {
 	SetCvar("mp_autoteambalance", "0");
 	SetCvar("mp_limitteams", "0");
+	ServerCommand("sm_rr");
 }
 
 public Action PlayerJoinTeam(Handle ev, char[] name, bool dbroad){
@@ -232,7 +234,7 @@ public Action TimeKill(Handle timer)
 			DealDamage(i, life, 0,(1 << 1));
 		}
 	}
-	CPrintToChatAll("{green}[AbNeR DeathRun] {default}%t", "TimeOver");
+	CPrintToChatAll("{green}[Abner DeathRun] {default}%t", "TimeOver");
 	return Plugin_Continue;
 }
 
@@ -320,8 +322,10 @@ public void ChangeTeam(int client, int index)
 	{
 		int frags = GetClientFrags(client) +1;
 		int deaths = GetClientDeaths(client) -1;
+		int score = CS_GetClientContributionScore(client)+2;
 		SetEntProp(client, Prop_Data, "m_iFrags", frags);
 		SetEntProp(client, Prop_Data, "m_iDeaths", deaths);
+		CS_SetClientContributionScore(client, score);
 	}
 	ChangeClientTeam(client, index);
 }
@@ -342,7 +346,7 @@ public void NewRandomTR()
 	if(IsValidClient(client))
 	{
 		ChangeTeam(client, 2);
-		CPrintToChatAll("{green}[AbNeR DeathRun]{default} %t", "RandomTR");
+		CPrintToChatAll("{green}[Abner DeathRun]{default} %t", "RandomTR");
 	}
 }
 
@@ -429,7 +433,7 @@ public Action Suicide(int client, const char[] command, int args)
 	if(GetConVarInt(g_Enabled) != 1)
 		return Plugin_Continue;
 		
-	CPrintToChat(client, "{green}[AbNeR DeathRun] {default}%t.", "KillPrevent");
+	CPrintToChat(client, "{green}[Abner DeathRun] {default}%t.", "KillPrevent");
 	return Plugin_Handled;
 }
 
@@ -440,24 +444,3 @@ stock bool IsValidClient(int client)
 	if(!IsClientConnected(client)) return false;
 	return IsClientInGame(client);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
