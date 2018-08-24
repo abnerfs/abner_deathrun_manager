@@ -46,6 +46,7 @@ public void OnPluginStart()
 	
 	AddCommandListener(JoinTeam, "jointeam");
 	AddCommandListener(Suicide, "kill");
+	AddCommandListener(Suicide, "explode");
 	
 	HookEvent("player_spawn", PlayerSpawn); //TR Speed hook.
 	HookEvent("player_team", PlayerJoinTeam); //TR Speed hook.
@@ -56,6 +57,11 @@ public void OnPluginStart()
 	
 	RegConsoleCmd("goct", GoCT);
 	
+	ServerCommand("mp_backup_round_file \"\"");
+	ServerCommand("mp_backup_round_file_last \"\"");
+	ServerCommand("mp_backup_round_file_pattern \"\"");
+	ServerCommand("mp_backup_round_auto 0");
+	
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (!IsClientInGame(i))
@@ -65,6 +71,13 @@ public void OnPluginStart()
 		jaTR[i] = false;
 		SDKHook(i, SDKHook_OnTakeDamageAlive, OnTakeDamage);
 	}
+}
+public void OnMapStart()
+{
+	ServerCommand("mp_backup_round_file \"\"");
+	ServerCommand("mp_backup_round_file_last \"\"");
+	ServerCommand("mp_backup_round_file_pattern \"\"");
+	ServerCommand("mp_backup_round_auto 0");
 }
 
 public Action GoCT(int client, int args){
@@ -134,7 +147,9 @@ public void PlayerDeath(Handle event,const char[] name,bool dontBroadcast)
 	if(IsValidClient(attacker) && GetClientTeam(victim) == 2 && GetClientTeam(attacker) == 3)
 	{
 		int frags = GetClientFrags(attacker) +GetConVarInt(g_killTRFrag)-1;
+		int score =  CS_GetClientContributionScore(attacker) +GetConVarInt(g_killTRFrag)*2-2;
 		SetEntProp(attacker, Prop_Data, "m_iFrags", frags);
+		CS_SetClientContributionScore(attacker, score);
 	}
 }
 
