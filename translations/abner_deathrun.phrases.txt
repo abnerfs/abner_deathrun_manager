@@ -4,30 +4,36 @@
 	{
 		"en"			"Time limit reached."
 		"pt"			"Tempo limite alcançado."
+                "es"                    "Tiempo límite alcanzado."
 	}
 	"RandomTR"
 	{
 		"en"			"Random terrorist chosen."
 		"pt"			"Terrorista escolhido aleatoriamente."
+                "es"                    "Terrorista escogido aleatoriamente."
 	}
 	"RandomTR"
 	{
 		"en"			"Random terrorist chosen."
 		"pt"			"Terrorista escolhido aleatoriamente."
+                "es"                    "Terrorista escogido aleatoriamente."
 	}
 	"KillPrevent"
 	{
 		"en" 		"Kill command disabled."
 		"pt" 		"Comando kill desativado."
+                "es"            "Comando kill desactivado."
 	}
 	"Cant Change"
 	{
 		"en" 		"***Terrorists Can't Change Team***"
 		"pt" 		"***Terroristas não podem trocar de time***"
+                "es"            "***Terroristas no pueden cambiar de team***"
 	}
 	"Team Limit"
 	{
 		"en"		"***Terrorist Team Limited to 1 player***"
 		"pt"		"***Time terrorista limitado a 1 jogador***"
+                "es"            "***Team terrorista limitado a 1 jugador***"
 	}
 }
